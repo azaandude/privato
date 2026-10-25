@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>NAME-O-MATIC — Manager Mode</title>
+<link href="fonts/fonts.css" rel="stylesheet">
+<script src="database.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{--bg:#07070f;--card:#0e0e1e;--border:rgba(255,255,255,.15);--text:#eeeeff;--muted:#8888bb;
+  --a1:#ff6b35;--a2:#ffd23f;--a3:#06ffa5;--a4:#a855f7;--a5:#3b82f6;--a6:#ec4899;--red:#ef4444;}
+body{background:var(--bg);color:var(--text);font-family:'Nunito',sans-serif;min-height:100vh;overflow-x:hidden;}
+::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:2px;}
+.hidden{display:none!important;}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse 70% 50% at 20% 0%,rgba(168,85,247,.09),transparent 55%),
+             radial-gradient(ellipse 60% 40% at 80% 100%,rgba(6,255,165,.06),transparent 55%);}
+
+nav{background:rgba(7,7,15,.97);backdrop-filter:blur(20px);border-bottom:1.5px solid var(--border);
+  height:54px;display:flex;align-items:center;padding:0 18px;gap:10px;position:sticky;top:0;z-index:100;}
+.logo{font-family:'Bangers',cursive;font-size:1.3rem;letter-spacing:3px;
+  background:linear-gradient(135deg,var(--a4),var(--a5));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.ml{margin-left:auto;}
+.nbtn{font-family:'Fredoka One',cursive;font-size:.76rem;padding:7px 14px;border-radius:9px;
+  cursor:pointer;border:1.5px solid var(--border);background:rgba(255,255,255,.09);
+  color:var(--text);text-decoration:none;transition:all .18s;font-weight:700;}
+.nbtn:hover{background:rgba(255,255,255,.18);}
+
+.wrap{max-width:900px;margin:0 auto;padding:18px 14px 50px;position:relative;z-index:1;}
+.hero{text-align:center;padding:12px 0 18px;}
+.hero-title{font-family:'Bangers',cursive;font-size:clamp(2rem,6vw,3.2rem);letter-spacing:3px;
+  background:linear-gradient(135deg,var(--a4),var(--a5));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:6px;}
+.hero-sub{font-size:.8rem;font-weight:700;color:var(--muted);}
+
+.gcard{background:var(--card);border:1.5px solid var(--border);border-radius:16px;padding:18px;margin-bottom:14px;}
+
+/* JOB SELECT */
+.league-select,.search-input{width:100%;background:rgba(255,255,255,.08);border:1.5px solid var(--border);
+  border-radius:10px;padding:11px 13px;color:var(--text);font-weight:700;font-size:.85rem;outline:none;margin-bottom:12px;}
+.club-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;}
+.club-pick{background:rgba(255,255,255,.04);border:1.5px solid var(--border);border-radius:14px;padding:14px;
+  text-align:center;cursor:pointer;transition:all .2s;}
+.club-pick:hover{transform:translateY(-4px);border-color:rgba(255,255,255,.4);}
+.club-emoji{font-size:2rem;margin-bottom:6px;}
+.club-pick-name{font-family:'Fredoka One',cursive;font-size:.8rem;margin-bottom:3px;}
+.club-pick-rating{font-family:'Bangers',cursive;font-size:.9rem;color:var(--a2);}
+.club-pick-exp{font-size:.58rem;color:var(--muted);font-weight:700;margin-top:2px;}
+
+/* DASHBOARD */
+.dash-top{display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap;}
+.club-badge{width:56px;height:56px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:1.8rem;flex-shrink:0;}
+.dash-club-name{font-family:'Bangers',cursive;font-size:1.25rem;letter-spacing:1px;}
+.dash-sub{font-size:.7rem;font-weight:800;color:var(--muted);}
+.confidence-track{height:14px;background:rgba(255,255,255,.08);border-radius:8px;overflow:hidden;margin:4px 0;}
+.confidence-fill{height:100%;border-radius:8px;transition:width .5s;}
+.confidence-lbl{display:flex;justify-content:space-between;font-size:.58rem;font-weight:900;color:var(--muted);text-transform:uppercase;}
+
+.dash-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px;}
+.dstat{background:rgba(255,255,255,.05);border-radius:10px;padding:9px;text-align:center;}
+.dstat-val{font-family:'Bangers',cursive;font-size:1.15rem;color:var(--a3);}
+.dstat-lbl{font-size:.5rem;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+
+.tab-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
+.dtab{font-family:'Fredoka One',cursive;font-size:.78rem;padding:9px 16px;border-radius:10px;
+  cursor:pointer;border:1.5px solid var(--border);background:rgba(255,255,255,.08);color:var(--muted);font-weight:700;}
+.dtab.active{background:rgba(168,85,247,.18);border-color:rgba(168,85,247,.5);color:var(--a4);}
+
+.fixture-card{background:rgba(255,255,255,.04);border:1.5px solid var(--border);border-radius:12px;padding:14px;margin-bottom:10px;}
+.fixture-vs{font-family:'Bangers',cursive;font-size:1.05rem;text-align:center;margin-bottom:8px;}
+.bigbtn{width:100%;padding:13px;font-family:'Bangers',cursive;font-size:1.15rem;letter-spacing:2px;
+  border:none;border-radius:12px;cursor:pointer;transition:all .2s;}
+.bigbtn:hover{transform:translateY(-2px);}
+.btn-go{background:linear-gradient(135deg,var(--a4),var(--a5));color:#fff;}
+.btn-reset{background:rgba(239,68,68,.15);border:1.5px solid rgba(239,68,68,.35);color:#fca5a5;font-size:.74rem;padding:9px;}
+
+.ltable{width:100%;border-collapse:collapse;font-size:.74rem;}
+.ltable th{text-align:left;padding:6px 5px;font-size:.56rem;font-weight:900;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border);}
+.ltable td{padding:7px 5px;border-bottom:1px solid rgba(255,255,255,.05);}
+.ltable tr.me{background:rgba(168,85,247,.1);}
+.ltable tr.me td{font-weight:900;}
+
+.squad-row,.market-item,.youth-row{display:flex;align-items:center;gap:8px;padding:9px 12px;background:rgba(255,255,255,.04);
+  border-radius:9px;margin-bottom:5px;font-size:.76rem;font-weight:700;}
+.squad-pos{font-size:.55rem;font-weight:900;padding:3px 8px;border-radius:6px;min-width:32px;text-align:center;background:rgba(255,255,255,.08);}
+.mbtn{font-size:.66rem;font-weight:800;padding:6px 13px;border-radius:8px;border:1.5px solid;cursor:pointer;margin-left:auto;}
+.mbtn.buy{background:rgba(6,255,165,.15);border-color:rgba(6,255,165,.4);color:var(--a3);}
+.mbtn.promote{background:rgba(168,85,247,.15);border-color:rgba(168,85,247,.4);color:var(--a4);}
+
+.staff-opt{display:flex;align-items:center;gap:10px;padding:14px;background:rgba(255,255,255,.04);
+  border:1.5px solid var(--border);border-radius:12px;margin-bottom:10px;}
+.staff-opt.hired{border-color:rgba(6,255,165,.4);background:rgba(6,255,165,.06);}
+
+/* PRESS CONFERENCE */
+.presser-q{font-family:'Fredoka One',cursive;font-size:.95rem;line-height:1.5;margin-bottom:14px;color:var(--a2);}
+.presser-opt{width:100%;text-align:left;padding:12px 14px;margin-bottom:8px;border-radius:10px;
+  border:1.5px solid var(--border);background:rgba(255,255,255,.05);color:var(--text);font-weight:700;font-size:.8rem;cursor:pointer;}
+.presser-opt:hover{background:rgba(168,85,247,.1);border-color:rgba(168,85,247,.4);}
+
+/* OVERLAYS */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,5,.9);z-index:500;align-items:center;justify-content:center;backdrop-filter:blur(10px);}
+.overlay-box{background:var(--card);border:2px solid var(--border);border-radius:18px;padding:26px;max-width:440px;width:90%;text-align:center;}
+.overlay-emoji{font-size:3rem;margin-bottom:8px;}
+.overlay-title{font-family:'Bangers',cursive;font-size:1.6rem;letter-spacing:2px;margin-bottom:8px;}
+.overlay-desc{font-size:.82rem;font-weight:700;color:var(--muted);margin-bottom:16px;line-height:1.6;}
+
+@keyframes fadein{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+.fadein{animation:fadein .3s ease both;}
+.cfp{position:fixed;pointer-events:none;border-radius:2px;top:-20px;z-index:999;}
+@keyframes cff{0%{transform:translateY(0) rotate(0);opacity:1;}100%{transform:translateY(110vh) rotate(720deg);opacity:0;}}
+
+/* nom-upgrade: mobile */
+@media (max-width:600px){
+  html,body{overflow-x:hidden}
+  img,canvas,video,svg{max-width:100%;height:auto}
+  nav{flex-wrap:wrap;height:auto;min-height:54px;padding:8px 10px;gap:6px}
+  nav .nbtn{font-size:.7rem;padding:5px 8px}
+  .nom-hub{bottom:8px}
+}
+</style>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#07070f">
+<script src="nom-net.js"></script>
+</head>
+<body>
+
+<nav>
+  <div class="logo">📋 MANAGER MODE</div>
+  <div class="ml" style="display:flex;gap:7px">
+    <a href="index.html" class="nbtn">🏠 Home</a>
+    <a href="app.html" class="nbtn">⚡ App</a>
+  </div>
+</nav>
+
+<div class="wrap">
+
+  <!-- JOB SELECT -->
+  <div id="jobSelectScreen">
+    <div class="hero fadein">
+      <div class="hero-title">📋 MANAGER MODE</div>
+      <div class="hero-sub">The long game. Multi-season careers, board confidence, transfers, press conferences, and a youth academy — across any club in any of the 22 real leagues in the database.</div>
+    </div>
+    <div class="gcard fadein">
+      <select class="league-select" id="leagueSelect" onchange="populateClubs()"></select>
+      <div class="club-grid" id="clubGrid"></div>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dashboardScreen" class="hidden">
+    <div class="gcard fadein">
+      <div class="dash-top">
+        <div class="club-badge" id="dashBadge">⚽</div>
+        <div style="flex:1">
+          <div class="dash-club-name" id="dashClubName">Club</div>
+          <div class="dash-sub" id="dashSub">Season 1</div>
+        </div>
+      </div>
+      <div class="confidence-lbl"><span>Board Confidence</span><span id="confVal">50%</span></div>
+      <div class="confidence-track"><div class="confidence-fill" id="confFill" style="width:50%"></div></div>
+
+      <div class="dash-stats">
+        <div class="dstat"><div class="dstat-val" id="dsPosition">—</div><div class="dstat-lbl">Position</div></div>
+        <div class="dstat"><div class="dstat-val" id="dsRecord">0-0-0</div><div class="dstat-lbl">W-D-L</div></div>
+        <div class="dstat"><div class="dstat-val" id="dsBudget">£0m</div><div class="dstat-lbl">Budget</div></div>
+        <div class="dstat"><div class="dstat-val" id="dsTrophies">0</div><div class="dstat-lbl">Career Trophies</div></div>
+      </div>
+
+      <div class="tab-row">
+        <div class="dtab active" data-tab="fixtures">📅 Fixtures</div>
+        <div class="dtab" data-tab="table">📊 Table</div>
+        <div class="dtab" data-tab="squad">👥 Squad</div>
+        <div class="dtab" data-tab="market">💰 Transfers</div>
+        <div class="dtab" data-tab="youth">🌱 Academy</div>
+        <div class="dtab" data-tab="staff">🧑‍💼 Staff</div>
+        <div class="dtab" data-tab="history">📜 Career History</div>
+      </div>
+
+      <div id="pane-fixtures"></div>
+      <div id="pane-table" class="hidden"></div>
+      <div id="pane-squad" class="hidden"></div>
+      <div id="pane-market" class="hidden"></div>
+      <div id="pane-youth" class="hidden"></div>
+      <div id="pane-staff" class="hidden"></div>
+      <div id="pane-history" class="hidden"></div>
+    </div>
+    <button class="bigbtn btn-reset" onclick="resignCareer()">🔄 Resign &amp; Start New Career</button>
+  </div>
+</div>
+
+<!-- PRESS CONFERENCE OVERLAY -->
+<div class="overlay" id="presserOverlay">
+  <div class="overlay-box">
+    <div style="font-size:2rem;margin-bottom:8px;">🎤</div>
+    <div class="presser-q" id="presserQ"></div>
+    <div id="presserOpts"></div>
+  </div>
+</div>
+
+<!-- MATCH RESULT OVERLAY -->
+<div class="overlay" id="resultOverlay">
+  <div class="overlay-box">
+    <div class="overlay-emoji" id="resEmoji">⚽</div>
+    <div class="overlay-title" id="resTitle">FULL TIME</div>
+    <div class="overlay-desc" id="resDesc"></div>
+    <button class="bigbtn btn-go" onclick="closeResult()">CONTINUE →</button>
+  </div>
+</div>
+
+<!-- SEASON END OVERLAY -->
+<div class="overlay" id="seasonEndOverlay">
+  <div class="overlay-box">
+    <div class="overlay-emoji" id="seEmoji">🏆</div>
+    <div class="overlay-title" id="seTitle">SEASON COMPLETE</div>
+    <div class="overlay-desc" id="seDesc"></div>
+    <button class="bigbtn btn-go" onclick="closeSeasonEnd()">CONTINUE →</button>
+  </div>
+</div>
+
+<!-- SACKED OVERLAY -->
+<div class="overlay" id="sackedOverlay">
+  <div class="overlay-box">
+    <div class="overlay-emoji">😔</div>
+    <div class="overlay-title" style="color:var(--red)">SACKED</div>
+    <div class="overlay-desc" id="sackedDesc"></div>
+    <button class="bigbtn btn-go" onclick="findNewJob()">🔍 FIND A NEW JOB</button>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// FICTIONAL YOUTH NAME GENERATOR (never real players — homegrown prospects)
+// ═══════════════════════════════════════════════════════════════
+var YOUTH_FIRST = ['Kai','Noah','Leo','Theo','Marcus','Dante','Ezra','Milo','Jude','Enzo','Rafa','Idris','Bruno','Ollie','Tyrell','Amari','Kwame','Finn','Diego','Yusuf'];
+var YOUTH_LAST = ['Osei','Brennan','Farrell','Okonkwo','Ricci','Delacroix','Sorensen','Kowalski','Mendez','Silva','Whitfield','Adeyemi','Larsson','Novak','Petrov','Costa','Duarte','Haines','Kovac','Reyes'];
+function genYouthPlayer() {
+  var pos = ['GK','CB','LB','RB','CDM','CM','CAM','LW','RW','ST'][Math.floor(Math.random()*10)];
+  var name = YOUTH_FIRST[Math.floor(Math.random()*YOUTH_FIRST.length)] + ' ' + YOUTH_LAST[Math.floor(Math.random()*YOUTH_LAST.length)];
+  var potential = 65 + Math.floor(Math.random()*30);
+  var current = Math.max(50, potential - 15 - Math.floor(Math.random()*10));
+  return { name:name, pos:pos, nat:'🌍', age:16+Math.floor(Math.random()*3), ovr:current, potential:potential,
+    pac:current-5+Math.floor(Math.random()*10), sho:current-8+Math.floor(Math.random()*10), pas:current-6+Math.floor(Math.random()*10),
+    dri:current-4+Math.floor(Math.random()*10), def:current-15+Math.floor(Math.random()*10), phy:current-3+Math.floor(Math.random()*10) };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CAREER STATE
+// ═══════════════════════════════════════════════════════════════
+var MGR = loadMgr();
+function loadMgr() {
+  try { var s = JSON.parse(localStorage.getItem('nom_manager_mode')); if (s) return s; } catch(e) {}
+  return null;
+}
+function saveMgr() { if (MGR) localStorage.setItem('nom_manager_mode', JSON.stringify(MGR)); }
+function priceFor(ovr) { var p = Math.round((4 + Math.pow((ovr-65)/26,1.8)*11)*10)/10; return Math.max(4.0, Math.min(15.5, p)); }
+
+function expectationFor(rating) {
+  if (rating >= 85) return { label:'Title Challenge', min:1, max:3 };
+  if (rating >= 78) return { label:'European Qualification', min:2, max:7 };
+  if (rating >= 70) return { label:'Mid-Table Finish', min:6, max:14 };
+  return { label:'Avoid Relegation', min:10, max:18 };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// JOB SELECT
+// ═══════════════════════════════════════════════════════════════
+function populateLeagues() {
+  var sel = document.getElementById('leagueSelect');
+  if (!window.NOMDB) { sel.innerHTML = '<option>Database not loaded</option>'; return; }
+  sel.innerHTML = window.NOMDB.leagues.filter(function(l){ return l.clubs.some(function(c){ return c.players.length >= 8; }); })
+    .map(function(l){ return '<option value="'+l.id+'">'+l.name+' ('+l.country+')</option>'; }).join('');
+  populateClubs();
+}
+function populateClubs() {
+  var leagueId = document.getElementById('leagueSelect').value;
+  var lg = window.NOMDB.leagues.find(function(l){ return l.id === leagueId; });
+  var clubs = lg.clubs.filter(function(c){ return c.players.length >= 8; });
+  document.getElementById('clubGrid').innerHTML = clubs.map(function(c) {
+    var exp = expectationFor(c.rating);
+    return '<div class="club-pick" data-club="'+esc(c.name)+'"><div class="club-emoji">'+c.emoji+'</div>'
+      + '<div class="club-pick-name">'+esc(c.name)+'</div><div class="club-pick-rating">⭐ '+c.rating+'</div>'
+      + '<div class="club-pick-exp">'+exp.label+'</div></div>';
+  }).join('');
+  document.querySelectorAll('.club-pick').forEach(function(el){
+    el.addEventListener('click', function(){ takeJob(el.getAttribute('data-club')); });
+  });
+}
+
+function takeJob(clubName) {
+  var leagueId = document.getElementById('leagueSelect').value;
+  var lg = window.NOMDB.leagues.find(function(l){ return l.id === leagueId; });
+  var club = lg.clubs.find(function(c){ return c.name === clubName; });
+  if (!club) return;
+
+  var opponents = lg.clubs.filter(function(c){ return c.name !== clubName && c.players.length >= 4; });
+  var fixtures = opponents.slice().sort(function(){ return Math.random()-0.5; }).slice(0, Math.min(14, opponents.length))
+    .map(function(c){ return { opponent:c.name, opponentEmoji:c.emoji, opponentRating:c.rating, home:Math.random()<0.5, played:false }; });
+
+  var table = [{ name:club.name, rating:club.rating, isMe:true, p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0 }];
+  fixtures.forEach(function(f){
+    if (!table.some(function(r){return r.name===f.opponent;})) {
+      table.push({ name:f.opponent, rating:f.opponentRating, isMe:false, p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0 });
+    }
+  });
+
+  var history = MGR ? MGR.history : [];
+  MGR = {
+    managerName: MGR ? MGR.managerName : 'Manager',
+    clubName: club.name, clubEmoji: club.emoji, clubColor: club.color, leagueId: lg.id, leagueName: lg.name,
+    clubRating: club.rating, season: 1, matchIdx: 0,
+    boardConfidence: 55, budget: Math.round(club.rating/4),
+    squad: club.players.map(function(p){ return Object.assign({}, p, { price: priceFor(p.ovr) }); }),
+    youthProspects: [genYouthPlayer(), genYouthPlayer(), genYouthPlayer()],
+    staff: { assistant:false, scout:false },
+    fixtures: fixtures, table: table,
+    wins:0, draws:0, losses:0, trophies: 0,
+    history: history,
+    pendingPresser: null
+  };
+  saveMgr();
+  document.getElementById('jobSelectScreen').classList.add('hidden');
+  document.getElementById('dashboardScreen').classList.remove('hidden');
+  renderDashboard();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════════════
+document.querySelectorAll('.tab-row .dtab').forEach(function(tab){
+  tab.addEventListener('click', function(){ showTab(tab.getAttribute('data-tab'), tab); });
+});
+function showTab(name, btn) {
+  ['fixtures','table','squad','market','youth','staff','history'].forEach(function(t){
+    document.getElementById('pane-'+t).classList.add('hidden');
+  });
+  document.getElementById('pane-'+name).classList.remove('hidden');
+  document.querySelectorAll('.tab-row .dtab').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+}
+
+function renderDashboard() {
+  document.getElementById('dashBadge').textContent = MGR.clubEmoji;
+  document.getElementById('dashBadge').style.background = (MGR.clubColor||'#3b82f6') + '33';
+  document.getElementById('dashClubName').textContent = MGR.clubName;
+  document.getElementById('dashSub').textContent = MGR.leagueName + ' · Season ' + MGR.season + ' · Match ' + (MGR.matchIdx+1) + '/' + MGR.fixtures.length;
+
+  document.getElementById('confVal').textContent = MGR.boardConfidence + '%';
+  document.getElementById('confFill').style.width = MGR.boardConfidence + '%';
+  document.getElementById('confFill').style.background = MGR.boardConfidence < 30 ? 'linear-gradient(90deg,#ef4444,#dc2626)' : MGR.boardConfidence < 60 ? 'linear-gradient(90deg,#ffd23f,#ff6b35)' : 'linear-gradient(90deg,#06ffa5,#3b82f6)';
+
+  var myRow = MGR.table.find(function(r){ return r.isMe; });
+  var sorted = MGR.table.slice().sort(function(a,b){ return b.pts-a.pts || (b.gf-b.ga)-(a.gf-a.ga); });
+  var pos = sorted.findIndex(function(r){ return r.isMe; }) + 1;
+  document.getElementById('dsPosition').textContent = pos ? '#'+pos : '—';
+  document.getElementById('dsRecord').textContent = MGR.wins+'-'+MGR.draws+'-'+MGR.losses;
+  document.getElementById('dsBudget').textContent = '£'+MGR.budget.toFixed(1)+'m';
+  document.getElementById('dsTrophies').textContent = MGR.trophies;
+
+  renderFixtures(); renderTable(); renderSquad(); renderMarket(); renderYouth(); renderStaff(); renderHistory();
+}
+
+function renderFixtures() {
+  var el = document.getElementById('pane-fixtures');
+  var next = MGR.fixtures[MGR.matchIdx];
+  if (!next) { el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--muted);font-weight:700">Season complete — advance to next season below.</div>'; return; }
+  var html = '<div class="fixture-card"><div class="fixture-vs">'+(next.home?esc(MGR.clubName):esc(next.opponent))+' vs '+(next.home?esc(next.opponent):esc(MGR.clubName))+'</div>'
+    + '<div style="text-align:center;font-size:.68rem;color:var(--muted);font-weight:700;margin-bottom:10px">'+(next.home?'HOME':'AWAY')+' · Opponent rating '+next.opponentRating+'</div>'
+    + '<button class="bigbtn btn-go" id="simMatchBtn">▶ SIMULATE MATCH</button></div>';
+  el.innerHTML = html;
+  document.getElementById('simMatchBtn').addEventListener('click', simulateNextMatch);
+}
+
+function renderTable() {
+  var sorted = MGR.table.slice().sort(function(a,b){ return b.pts-a.pts || (b.gf-b.ga)-(a.gf-a.ga) || b.gf-a.gf; });
+  var html = '<table class="ltable"><thead><tr><th>#</th><th>Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead><tbody>';
+  sorted.forEach(function(r,i){
+    html += '<tr class="'+(r.isMe?'me':'')+'"><td>'+(i+1)+'</td><td>'+esc(r.name)+'</td><td>'+r.p+'</td><td>'+r.w+'</td><td>'+r.d+'</td><td>'+r.l+'</td><td>'+(r.gf-r.ga>=0?'+':'')+(r.gf-r.ga)+'</td><td><b>'+r.pts+'</b></td></tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('pane-table').innerHTML = html;
+}
+
+function renderSquad() {
+  var sorted = MGR.squad.slice().sort(function(a,b){ return b.ovr-a.ovr; });
+  document.getElementById('pane-squad').innerHTML = sorted.map(function(p){
+    return '<div class="squad-row"><span class="squad-pos">'+p.pos+'</span><span>'+p.nat+' '+esc(p.name)+'</span>'
+      + '<span style="margin-left:auto;font-family:Bangers,cursive;color:var(--a2)">'+p.ovr+'</span></div>';
+  }).join('') + '<div style="text-align:center;margin-top:8px;font-size:.7rem;color:var(--muted);font-weight:800">Squad avg: '
+    + Math.round(MGR.squad.reduce(function(t,p){return t+p.ovr;},0)/MGR.squad.length) + ' OVR</div>';
+}
+
+function renderMarket() {
+  document.getElementById('pane-market').innerHTML = '<input class="search-input" id="mktSearch" placeholder="Search any player in the database...">'
+    + '<div id="mktList"></div>';
+  document.getElementById('mktSearch').addEventListener('input', filterMarket);
+  filterMarket();
+}
+function filterMarket() {
+  var q = (document.getElementById('mktSearch').value||'').toLowerCase();
+  var listEl = document.getElementById('mktList');
+  if (q.length < 2) { listEl.innerHTML = '<div style="text-align:center;padding:14px;color:var(--muted);font-size:.75rem">Type at least 2 letters...</div>'; return; }
+  var results = [];
+  window.NOMDB.leagues.forEach(function(lg){
+    lg.clubs.forEach(function(c){
+      c.players.forEach(function(p){
+        if (p.name.toLowerCase().indexOf(q)!==-1 && !MGR.squad.some(function(s){return s.name===p.name;})) {
+          results.push(Object.assign({}, p, { club:c.name, price:priceFor(p.ovr) }));
+        }
+      });
+    });
+  });
+  results.sort(function(a,b){return b.ovr-a.ovr;});
+  listEl.innerHTML = results.slice(0,15).map(function(p){
+    var afford = p.price <= MGR.budget;
+    return '<div class="market-item"><span>'+p.nat+' '+esc(p.name)+'</span><span style="font-size:.62rem;color:var(--muted)">'+esc(p.club)+'</span>'
+      + '<span style="font-family:Bangers,cursive;color:var(--a2)">'+p.ovr+'</span><span style="font-family:Bangers,cursive;color:var(--a3)">£'+p.price.toFixed(1)+'m</span>'
+      + '<button class="mbtn buy" data-name="'+esc(p.name).replace(/"/g,'&quot;')+'" data-price="'+p.price+'" '+(afford?'':'disabled style="opacity:.4"')+'>Sign</button></div>';
+  }).join('') || '<div style="text-align:center;padding:14px;color:var(--muted);font-size:.75rem">No players found</div>';
+  listEl.querySelectorAll('.mbtn.buy').forEach(function(btn){
+    btn.addEventListener('click', function(){ signPlayer(btn.getAttribute('data-name'), parseFloat(btn.getAttribute('data-price'))); });
+  });
+}
+function signPlayer(name, price) {
+  if (price > MGR.budget) return;
+  var found = null;
+  window.NOMDB.leagues.some(function(lg){ return lg.clubs.some(function(c){ return c.players.some(function(p){ if (p.name===name) { found = p; return true; } return false; }); }); });
+  if (!found) return;
+  MGR.budget -= price;
+  MGR.squad.push(Object.assign({}, found, { price:price }));
+  saveMgr(); renderDashboard();
+  document.querySelector('.tab-row .dtab[data-tab="market"]').click();
+}
+
+function renderYouth() {
+  document.getElementById('pane-youth').innerHTML = MGR.youthProspects.map(function(p,i){
+    return '<div class="youth-row"><span class="squad-pos">'+p.pos+'</span><span>🌍 '+esc(p.name)+' <span style="color:var(--muted);font-size:.62rem">(age '+p.age+')</span></span>'
+      + '<span style="margin-left:auto;font-family:Bangers,cursive;color:var(--a2)">'+p.ovr+'</span>'
+      + '<span style="font-size:.6rem;color:var(--a4);font-weight:800">POT '+p.potential+'</span>'
+      + '<button class="mbtn promote" data-idx="'+i+'">Promote</button></div>';
+  }).join('') + '<div style="text-align:center;margin-top:8px;font-size:.68rem;color:var(--muted);font-weight:700">New prospects are scouted each season'+(MGR.staff.scout?' (scout bonus active — higher potential!)':'')+'.</div>';
+  document.querySelectorAll('#pane-youth .mbtn.promote').forEach(function(btn){
+    btn.addEventListener('click', function(){ promoteYouth(parseInt(btn.getAttribute('data-idx'))); });
+  });
+}
+function promoteYouth(i) {
+  var p = MGR.youthProspects[i];
+  if (!p) return;
+  MGR.squad.push(Object.assign({}, p, { price: priceFor(p.ovr) }));
+  MGR.youthProspects.splice(i,1);
+  saveMgr(); renderDashboard();
+  document.querySelector('.tab-row .dtab[data-tab="youth"]').click();
+}
+
+function renderStaff() {
+  var el = document.getElementById('pane-staff');
+  el.innerHTML =
+    '<div class="staff-opt'+(MGR.staff.assistant?' hired':'')+'"><span style="font-size:1.5rem">🧑‍🏫</span><div style="flex:1"><b>Assistant Coach</b><div style="font-size:.68rem;color:var(--muted)">Improves match performance slightly (£8m one-time)</div></div>'
+      + (MGR.staff.assistant ? '<span style="color:var(--a3);font-weight:800;font-size:.7rem">HIRED</span>' : '<button class="mbtn buy" id="hireAssistant">Hire £8m</button>') + '</div>'
+    + '<div class="staff-opt'+(MGR.staff.scout?' hired':'')+'"><span style="font-size:1.5rem">🔭</span><div style="flex:1"><b>Chief Scout</b><div style="font-size:.68rem;color:var(--muted)">Improves youth academy prospect quality (£6m one-time)</div></div>'
+      + (MGR.staff.scout ? '<span style="color:var(--a3);font-weight:800;font-size:.7rem">HIRED</span>' : '<button class="mbtn buy" id="hireScout">Hire £6m</button>') + '</div>';
+  var ab = document.getElementById('hireAssistant');
+  if (ab) ab.addEventListener('click', function(){ if (MGR.budget>=8){ MGR.budget-=8; MGR.staff.assistant=true; saveMgr(); renderDashboard(); document.querySelector('.tab-row .dtab[data-tab="staff"]').click(); } });
+  var sb = document.getElementById('hireScout');
+  if (sb) sb.addEventListener('click', function(){ if (MGR.budget>=6){ MGR.budget-=6; MGR.staff.scout=true; saveMgr(); renderDashboard(); document.querySelector('.tab-row .dtab[data-tab="staff"]').click(); } });
+}
+
+function renderHistory() {
+  var el = document.getElementById('pane-history');
+  if (!MGR.history.length) { el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--muted);font-size:.76rem">No completed jobs yet — this is your first post.</div>'; return; }
+  el.innerHTML = MGR.history.slice().reverse().map(function(h){
+    return '<div class="youth-row"><span>'+h.clubEmoji+' '+esc(h.clubName)+'</span><span style="font-size:.65rem;color:var(--muted)">Season '+h.season+'</span>'
+      + '<span style="margin-left:auto;font-size:.68rem;font-weight:800;color:'+(h.outcome==='Sacked'?'var(--red)':'var(--a3)')+'">'+h.outcome+' — Finished '+h.position+'</span></div>';
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PRESS CONFERENCES
+// ═══════════════════════════════════════════════════════════════
+var PRESSER_QUESTIONS = [
+  { q: "The fans are getting restless about recent performances. What's your message?", opts: [
+      { t: "\"We're building something — trust the process.\"", conf: 2 },
+      { t: "\"Results need to improve, and fast. No excuses.\"", conf: 4 },
+      { t: "\"The board and I are fully aligned on the direction.\"", conf: 3 }
+  ]},
+  { q: "A journalist asks if you're worried about your job security.", opts: [
+      { t: "\"I don't read the papers — I focus on the training ground.\"", conf: 2 },
+      { t: "\"I answer to the board, and I'm confident in our plan.\"", conf: 3 },
+      { t: "\"Every manager should worry if results don't improve — that's football.\"", conf: 1 }
+  ]},
+  { q: "You're asked about transfer targets for the next window.", opts: [
+      { t: "\"We have a clear list — I won't reveal names.\"", conf: 2 },
+      { t: "\"We're focused on the players already here first.\"", conf: 3 },
+      { t: "\"The board knows exactly what I need to compete.\"", conf: 2 }
+  ]}
+];
+function maybeTriggerPresser() {
+  if (Math.random() < 0.35) {
+    var q = PRESSER_QUESTIONS[Math.floor(Math.random()*PRESSER_QUESTIONS.length)];
+    document.getElementById('presserQ').textContent = q.q;
+    document.getElementById('presserOpts').innerHTML = q.opts.map(function(o,i){
+      return '<button class="presser-opt" data-conf="'+o.conf+'">'+o.t+'</button>';
+    }).join('');
+    document.querySelectorAll('#presserOpts .presser-opt').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        MGR.boardConfidence = Math.min(100, MGR.boardConfidence + parseInt(btn.getAttribute('data-conf')));
+        saveMgr();
+        document.getElementById('presserOverlay').style.display = 'none';
+        renderDashboard();
+      });
+    });
+    document.getElementById('presserOverlay').style.display = 'flex';
+    return true;
+  }
+  return false;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MATCH SIMULATION
+// ═══════════════════════════════════════════════════════════════
+function simulateNextMatch() {
+  var fixture = MGR.fixtures[MGR.matchIdx];
+  if (!fixture) return;
+  var myAvg = Math.round(MGR.squad.reduce(function(t,p){return t+p.ovr;},0)/MGR.squad.length);
+  if (MGR.staff.assistant) myAvg += 2;
+  var diff = myAvg - fixture.opponentRating;
+  var myGoals = 0, oppGoals = 0;
+  for (var i=0;i<5;i++){ if (Math.random() < 0.18 + diff*0.01) myGoals++; }
+  for (var i=0;i<5;i++){ if (Math.random() < 0.16 - diff*0.008) oppGoals++; }
+  myGoals = Math.max(0, myGoals); oppGoals = Math.max(0, oppGoals);
+
+  var myRow = MGR.table.find(function(r){return r.isMe;});
+  var oppRow = MGR.table.find(function(r){return r.name===fixture.opponent;});
+  myRow.p++; oppRow.p++;
+  myRow.gf+=myGoals; myRow.ga+=oppGoals; oppRow.gf+=oppGoals; oppRow.ga+=myGoals;
+
+  var outcome, confDelta;
+  var expectedToWin = diff > 5;
+  var expectedToLose = diff < -5;
+  if (myGoals > oppGoals) {
+    MGR.wins++; myRow.w++; myRow.pts+=3; oppRow.l++;
+    outcome = 'WIN'; confDelta = expectedToWin ? 2 : 6;
+  } else if (myGoals < oppGoals) {
+    MGR.losses++; myRow.l++; oppRow.w++; oppRow.pts+=3;
+    outcome = 'LOSS'; confDelta = expectedToLose ? -2 : -8;
+  } else {
+    MGR.draws++; myRow.d++; myRow.pts+=1; oppRow.d++; oppRow.pts+=1;
+    outcome = 'DRAW'; confDelta = -1;
+  }
+  MGR.boardConfidence = Math.max(0, Math.min(100, MGR.boardConfidence + confDelta));
+  MGR.budget += outcome==='WIN' ? 2 : outcome==='DRAW' ? 0.8 : 0.3;
+  MGR.fixtures[MGR.matchIdx].played = true;
+  MGR.matchIdx++;
+  saveMgr();
+
+  var emoji = outcome==='WIN'?'🎉':outcome==='DRAW'?'🤝':'😞';
+  document.getElementById('resEmoji').textContent = emoji;
+  document.getElementById('resTitle').textContent = 'FULL TIME — ' + outcome;
+  document.getElementById('resDesc').textContent = (fixture.home?MGR.clubName:fixture.opponent) + ' ' + (fixture.home?myGoals:oppGoals) + ' - ' + (fixture.home?oppGoals:myGoals) + ' ' + (fixture.home?fixture.opponent:MGR.clubName)
+    + '\\n\\nBoard confidence: ' + (confDelta>=0?'+':'') + confDelta + '%';
+  document.getElementById('resDesc').style.whiteSpace = 'pre-line';
+  document.getElementById('resultOverlay').style.display = 'flex';
+
+  if (outcome==='WIN' && myGoals >= 3) boom();
+
+  window._pendingSeasonCheck = true;
+}
+
+function closeResult() {
+  document.getElementById('resultOverlay').style.display = 'none';
+  if (MGR.boardConfidence <= 0) { showSacked(); return; }
+  if (MGR.matchIdx >= MGR.fixtures.length) { showSeasonEnd(); return; }
+  if (!maybeTriggerPresser()) renderDashboard();
+  else renderDashboard();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SEASON END / SACKING / NEW JOB
+// ═══════════════════════════════════════════════════════════════
+function showSeasonEnd() {
+  var sorted = MGR.table.slice().sort(function(a,b){ return b.pts-a.pts || (b.gf-b.ga)-(a.gf-a.ga); });
+  var pos = sorted.findIndex(function(r){return r.isMe;}) + 1;
+  var exp = expectationFor(MGR.clubRating);
+  var metExpectation = pos <= exp.max;
+  var wonTitle = pos === 1;
+  if (wonTitle) MGR.trophies++;
+
+  document.getElementById('seEmoji').textContent = wonTitle ? '🏆' : metExpectation ? '👍' : '😬';
+  document.getElementById('seTitle').textContent = wonTitle ? 'CHAMPIONS!' : metExpectation ? 'SEASON COMPLETE' : 'BELOW EXPECTATIONS';
+  document.getElementById('seDesc').textContent = 'Finished #' + pos + ' in ' + MGR.leagueName + '. The board expected: ' + exp.label + '.'
+    + (wonTitle ? ' An incredible achievement — the board is thrilled!' : metExpectation ? ' A satisfactory campaign in the the board is happy with the campaign overall.' : ' The board is unhappy with this outcome.');
+  document.getElementById('seDesc').style.whiteSpace = 'pre-line';
+  document.getElementById('seasonEndOverlay').style.display = 'flex';
+
+  MGR.boardConfidence = Math.max(0, Math.min(100, MGR.boardConfidence + (wonTitle?15:metExpectation?5:-15)));
+  window._seasonEndPos = pos;
+  saveMgr();
+  if (wonTitle) boom();
+}
+
+function closeSeasonEnd() {
+  document.getElementById('seasonEndOverlay').style.display = 'none';
+  if (MGR.boardConfidence <= 15) { showSacked(); return; }
+  advanceSeason();
+}
+
+function advanceSeason() {
+  MGR.season++;
+  MGR.matchIdx = 0;
+  MGR.wins = 0; MGR.draws = 0; MGR.losses = 0;
+  MGR.squad.forEach(function(p){ p.age++; });
+  MGR.youthProspects = MGR.staff.scout ? [genYouthPlayer(), genYouthPlayer(), genYouthPlayer(), genYouthPlayer()] : [genYouthPlayer(), genYouthPlayer(), genYouthPlayer()];
+  if (MGR.staff.scout) MGR.youthProspects.forEach(function(p){ p.potential = Math.min(99, p.potential + 5); });
+
+  var lg = window.NOMDB.leagues.find(function(l){ return l.id === MGR.leagueId; });
+  var opponents = lg.clubs.filter(function(c){ return c.name !== MGR.clubName && c.players.length >= 4; });
+  MGR.fixtures = opponents.slice().sort(function(){return Math.random()-0.5;}).slice(0, Math.min(14, opponents.length))
+    .map(function(c){ return { opponent:c.name, opponentEmoji:c.emoji, opponentRating:c.rating, home:Math.random()<0.5, played:false }; });
+  MGR.table = [{ name:MGR.clubName, rating:MGR.clubRating, isMe:true, p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0 }];
+  MGR.fixtures.forEach(function(f){
+    if (!MGR.table.some(function(r){return r.name===f.opponent;})) {
+      MGR.table.push({ name:f.opponent, rating:f.opponentRating, isMe:false, p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0 });
+    }
+  });
+  saveMgr();
+  renderDashboard();
+}
+
+function showSacked() {
+  document.getElementById('seasonEndOverlay').style.display = 'none';
+  document.getElementById('resultOverlay').style.display = 'none';
+  var pos = window._seasonEndPos || '—';
+  document.getElementById('sackedDesc').textContent = 'The board has lost confidence in your leadership at ' + MGR.clubName + '. Your time there is over.';
+  MGR.history.push({ clubName:MGR.clubName, clubEmoji:MGR.clubEmoji, season:MGR.season, outcome:'Sacked', position: pos });
+  saveMgr();
+  document.getElementById('sackedOverlay').style.display = 'flex';
+}
+function findNewJob() {
+  document.getElementById('sackedOverlay').style.display = 'none';
+  document.getElementById('dashboardScreen').classList.add('hidden');
+  document.getElementById('jobSelectScreen').classList.remove('hidden');
+  MGR = null;
+}
+
+function resignCareer() {
+  if (!confirm('Resign and start a brand new manager career? Your club history will reset.')) return;
+  if (MGR) {
+    var sorted = MGR.table.slice().sort(function(a,b){ return b.pts-a.pts || (b.gf-b.ga)-(a.gf-a.ga); });
+    var pos = sorted.findIndex(function(r){return r.isMe;}) + 1;
+    MGR.history.push({ clubName:MGR.clubName, clubEmoji:MGR.clubEmoji, season:MGR.season, outcome:'Resigned', position: pos || '—' });
+  }
+  localStorage.removeItem('nom_manager_mode');
+  MGR = null;
+  document.getElementById('dashboardScreen').classList.add('hidden');
+  document.getElementById('jobSelectScreen').classList.remove('hidden');
+}
+
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function boom() {
+  var cols = ['#ff6b35','#ffd23f','#06ffa5','#a855f7','#3b82f6'];
+  for (var i=0;i<44;i++){
+    var p=document.createElement('div'); p.className='cfp';
+    var sz=Math.random()*9+4;
+    p.style.cssText='left:'+Math.random()*100+'vw;background:'+cols[Math.floor(Math.random()*cols.length)]+';width:'+sz+'px;height:'+sz+'px;border-radius:'+(Math.random()>.5?'50%':'2px')+';animation:cff '+(Math.random()*2+1)+'s linear forwards;';
+    document.body.appendChild(p);
+    p.addEventListener('animationend',function(){ if(p.parentNode) p.parentNode.removeChild(p); });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+populateLeagues();
+if (MGR) {
+  document.getElementById('jobSelectScreen').classList.add('hidden');
+  document.getElementById('dashboardScreen').classList.remove('hidden');
+  renderDashboard();
+}
+</script>
+</body>
+</html>
